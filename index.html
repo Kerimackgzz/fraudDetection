@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>FraudGuard | Fraud Detection</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <main class="container">
+    <section class="hero">
+      <p class="badge">Fintech Fraud Detection System</p>
+      <h1>FraudGuard</h1>
+      <p class="subtitle">
+        Transaction verilerini analiz eder, risk skorunu hesaplar ve işlemi
+        SAFE, SUSPICIOUS veya FRAUD olarak sınıflandırır.
+      </p>
+    </section>
+
+    <section class="panel">
+      <form id="transactionForm" class="form">
+        <div class="form-group">
+          <label for="amount">Transaction Amount</label>
+          <input type="number" id="amount" placeholder="Örn: 120000" required />
+        </div>
+
+        <div class="form-group">
+          <label for="country">Transaction Country</label>
+          <input type="text" id="country" placeholder="Örn: RU" required />
+        </div>
+
+        <div class="form-group">
+          <label for="userCountry">User Country</label>
+          <input type="text" id="userCountry" placeholder="Örn: TR" required />
+        </div>
+
+        <div class="form-group">
+          <label for="hour">Transaction Hour</label>
+          <input type="number" id="hour" min="0" max="23" placeholder="Örn: 3" required />
+        </div>
+
+        <div class="form-group">
+          <label for="transactionsLastMinute">Transactions Last Minute</label>
+          <input type="number" id="transactionsLastMinute" placeholder="Örn: 8" required />
+        </div>
+
+        <button type="submit">Analyze Transaction</button>
+      </form>
+
+      <div class="result-card hidden" id="resultCard">
+        <p class="result-label">Analysis Result</p>
+
+        <div class="score-row">
+          <span>Risk Score</span>
+          <strong id="riskScore">0</strong>
+        </div>
+
+        <div class="status" id="statusText">SAFE</div>
+
+        <div class="reasons">
+          <h3>Reasons</h3>
+          <ul id="reasonsList"></ul>
+        </div>
+      </div>
+    </section>
+    <section class="history-section">
+  <div class="history-header">
+    <div>
+      <p class="result-label">Transaction History</p>
+      <h2>Geçmiş İşlemler</h2>
+    </div>
+    <button type="button" id="refreshHistoryBtn" class="secondary-btn">
+      Refresh
+    </button>
+  </div>
+
+  <div class="table-wrapper">
+    <table>
+      <thead>
+        <tr>
+          <th>Amount</th>
+          <th>Country</th>
+          <th>User Country</th>
+          <th>Hour</th>
+          <th>Risk Score</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody id="transactionsTableBody">
+        <tr>
+          <td colspan="6" class="empty-row">Henüz işlem yok.</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>
