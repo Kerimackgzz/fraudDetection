@@ -1,217 +1,166 @@
-// HTML içindeki id'si "transactionForm" olan formu seçiyoruz.
-// Kullanıcı bu formu doldurup butona basacak.
 const form = document.getElementById("transactionForm");
-
-// Sonucu göstereceğimiz kartı seçiyoruz.
-// Başta gizli olabilir, analizden sonra görünür yapacağız.
-const resultCard = document.getElementById("resultCard");
-
-// Risk skorunun yazılacağı HTML elemanını seçiyoruz.
 const riskScoreText = document.getElementById("riskScore");
-
-// SAFE / SUSPICIOUS / FRAUD yazısının gösterileceği alanı seçiyoruz.
 const statusText = document.getElementById("statusText");
-
-// Risk sebeplerini liste halinde göstereceğimiz ul elemanını seçiyoruz.
 const reasonsList = document.getElementById("reasonsList");
-
 const transactionsTableBody = document.getElementById("transactionsTableBody");
-
 const refreshHistoryBtn = document.getElementById("refreshHistoryBtn");
+const deleteDatabaseBtn = document.getElementById("deleteDatabaseBtn");
+const gaugeFill = document.getElementById("gaugeFill");
+const analyzeBtn = document.getElementById("analyzeBtn");
+const btnText = document.getElementById("btnText");
+const resultTimestamp = document.getElementById("resultTimestamp");
 
-// Frontend'in çalıştığı hostname'i alıyoruz.
-// Mesela sayfa http://127.0.0.1:5500 üzerinden çalışıyorsa hostname 127.0.0.1 olur.
-// Eğer hostname boş gelirse varsayılan olarak 127.0.0.1 kullanılır.
 const apiHost = window.location.hostname || "127.0.0.1";
-
-// Backend API'nin temel adresini oluşturuyoruz.
-// Örneğin apiHost 127.0.0.1 ise sonuç şöyle olur:
-// http://127.0.0.1:8001
 const apiBaseUrl = `http://${apiHost}:8001`;
 
+const GAUGE_CIRC = 502.65;
+let resultResetTimer = null;
 
-// Form submit edildiğinde çalışacak event listener.
-// Yani kullanıcı Analyze Transaction butonuna basınca bu fonksiyon çalışır.
+const WAITING_RESULT = {
+  riskScore: "-",
+  status: "WAITING",
+  reasons: ["Waiting for transaction analysis."]
+};
+
+function clearResultResetTimer() {
+  if (resultResetTimer) {
+    clearTimeout(resultResetTimer);
+    resultResetTimer = null;
+  }
+}
+
+function setGauge(score) {
+  if (score === "-" || score === null) {
+    gaugeFill.style.strokeDashoffset = GAUGE_CIRC;
+    gaugeFill.style.stroke = "#475569";
+    return;
+  }
+  gaugeFill.style.strokeDashoffset = GAUGE_CIRC - (score / 100) * GAUGE_CIRC;
+  if (score >= 70)      gaugeFill.style.stroke = "#ef4444";
+  else if (score >= 40) gaugeFill.style.stroke = "#f59e0b";
+  else                  gaugeFill.style.stroke = "#10b981";
+}
+
+function setReasons(reasons) {
+  reasonsList.replaceChildren();
+  reasons.forEach(function (reason) {
+    const li = document.createElement("li");
+    li.textContent = reason;
+    reasonsList.appendChild(li);
+  });
+}
+
+function setResultCard(result) {
+  riskScoreText.textContent = result.riskScore === "-" ? "—" : result.riskScore;
+  statusText.textContent = result.status;
+  statusText.className = "status";
+  statusText.classList.add(result.status.toLowerCase());
+  setGauge(result.riskScore);
+  if (result.riskScore !== "-" && resultTimestamp) {
+    resultTimestamp.textContent = "Analyzed at " + new Date().toLocaleTimeString();
+  }
+  setReasons(result.reasons);
+}
+
+function resetResultCard() {
+  setResultCard(WAITING_RESULT);
+  if (resultTimestamp) resultTimestamp.textContent = "Waiting for input...";
+}
+
+function scheduleResultReset() {
+  clearResultResetTimer();
+  resultResetTimer = setTimeout(function () {
+    resetResultCard();
+    resultResetTimer = null;
+  }, 10000);
+}
+
+resetResultCard();
+
 form.addEventListener("submit", async function (event) {
-
-  // Formun normal davranışını engelliyoruz.
-  // Normalde form submit edilince sayfa yenilenir.
-  // Biz sayfanın yenilenmesini istemiyoruz çünkü işlemi JavaScript ile yapacağız.
   event.preventDefault();
+  clearResultResetTimer();
 
+  if (analyzeBtn) analyzeBtn.disabled = true;
+  if (btnText) btnText.textContent = "Analyzing...";
 
-  // Kullanıcının formdan girdiği verileri alıp transaction objesine koyuyoruz.
   const transaction = {
-
-    // amount inputundaki değeri alıyoruz.
-    // Number() ile sayıya çeviriyoruz.
     amount: Number(document.getElementById("amount").value),
-
-    // country inputundaki değeri alıyoruz.
-    // Bu string olarak kalıyor.
     country: document.getElementById("country").value,
-
-    // userCountry inputundaki değeri alıyoruz.
-    // Backend tarafında bu alan user_country olarak bekleniyor.
     user_country: document.getElementById("userCountry").value,
-
-    // hour inputundaki değeri alıyoruz ve sayıya çeviriyoruz.
     hour: Number(document.getElementById("hour").value),
-
-    // Son 1 dakikadaki işlem sayısını alıyoruz ve sayıya çeviriyoruz.
-    // Backend bu alanı transactions_last_minute ismiyle bekliyor.
     transactions_last_minute: Number(document.getElementById("transactionsLastMinute").value)
   };
 
-
-  // try-catch kullanıyoruz.
-  // Çünkü backend kapalıysa, bağlantı hatası varsa veya başka sorun çıkarsa uygulama patlamasın.
   try {
-
-    // fetch ile backend'e istek atıyoruz.
-    // apiBaseUrl = http://127.0.0.1:8001
-    // Endpoint = /analyze-transaction
     const response = await fetch(`${apiBaseUrl}/analyze-transaction`, {
-
-      // POST methodu kullanıyoruz.
-      // Çünkü backend'e veri gönderiyoruz.
       method: "POST",
-
-      // Gönderdiğimiz verinin JSON olduğunu söylüyoruz.
-      headers: {
-        "Content-Type": "application/json"
-      },
-
-      // JavaScript objesini JSON string'e çevirip backend'e gönderiyoruz.
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify(transaction)
     });
-    //backend hata döndürürse bunu yakalamak için:
-     if (!response.ok) {
-    throw new Error("Backend hata döndürdü");
-     }
 
+    if (!response.ok) throw new Error("Backend hata döndürdü");
 
-    // Backend'den gelen JSON cevabı JavaScript objesine çeviriyoruz.
     const data = await response.json();
 
+    setResultCard({
+      riskScore: data.risk_score,
+      status: data.status,
+      reasons: data.reasons.length === 0
+        ? ["No suspicious activity detected."]
+        : data.reasons
+    });
 
-    // Sonuç kartının hidden class'ını kaldırıyoruz.
-    // Böylece sonuç ekranda görünür hale geliyor.
-    resultCard.classList.remove("hidden");
+    loadTransactionHistory();
+    scheduleResultReset();
 
-
-    // Backend'den gelen risk skorunu ekrana yazıyoruz.
-    riskScoreText.textContent = data.risk_score;
-
-    // Backend'den gelen status bilgisini ekrana yazıyoruz.
-    // Örnek: SAFE, SUSPICIOUS, FRAUD
-    statusText.textContent = data.status;
-
-
-    // Status alanının class'ını sıfırlıyoruz.
-    // Böylece önceki işlemden kalan safe/suspicious/fraud rengi temizleniyor.
-    statusText.className = "status";
-
-
-    // Eğer backend sonucu SAFE ise yeşil/güvenli class ekliyoruz.
-    if (data.status === "SAFE") {
-      statusText.classList.add("safe");
-
-    // Eğer sonuç SUSPICIOUS ise sarı/uyarı class ekliyoruz.
-    } else if (data.status === "SUSPICIOUS") {
-      statusText.classList.add("suspicious");
-
-    // Eğer sonuç FRAUD ise kırmızı/tehlikeli class ekliyoruz.
-    } else if (data.status === "FRAUD") {
-      statusText.classList.add("fraud");
-    }
-
-
-    // Önceki analizden kalan sebepleri temizliyoruz.
-    reasonsList.innerHTML = "";
-
-
-    // Eğer backend hiç risk sebebi döndürmediyse:
-    if (data.reasons.length === 0) {
-
-      // Yeni bir li elemanı oluşturuyoruz.
-      const li = document.createElement("li");
-
-      // İçine güvenli mesaj yazıyoruz.
-      li.textContent = "No suspicious activity detected.";
-
-      // Bu li elemanını reasonsList içine ekliyoruz.
-      reasonsList.appendChild(li);
-
-    // Eğer risk sebepleri varsa:
-    } else {
-
-      // Her bir sebep için döngü kuruyoruz.
-      data.reasons.forEach(function (reason) {
-
-        // Yeni bir li elemanı oluşturuyoruz.
-        const li = document.createElement("li");
-
-        // Risk sebebini li içine yazıyoruz.
-        li.textContent = reason;
-
-        // li elemanını ekrandaki listeye ekliyoruz.
-        reasonsList.appendChild(li);
-      });
-    }
-    
-
-
-  // Eğer try bloğu içinde hata olursa burası çalışır.
   } catch (error) {
-
-    // Kullanıcıya backend bağlantısında sorun olduğunu söylüyoruz.
     alert("Backend bağlantısı kurulamadı. FastAPI server açık mı kontrol et.");
-
-    // Gerçek hata detayını console'a yazdırıyoruz.
-    // Geliştirici olarak hatayı buradan inceleriz.
     console.error(error);
+  } finally {
+    if (analyzeBtn) analyzeBtn.disabled = false;
+    if (btnText) btnText.textContent = "Analyze Transaction";
   }
-  async function loadTransactionHistory() {
+});
+
+async function loadTransactionHistory() {
   try {
     const response = await fetch(`${apiBaseUrl}/transactions`);
-
-    if (!response.ok) {
-      throw new Error("Transaction history alınamadı");
-    }
+    if (!response.ok) throw new Error("Transaction history alınamadı");
 
     const data = await response.json();
     const transactions = data.transactions;
 
+    const total      = transactions.length;
+    const fraudCount = transactions.filter(function (t) { return t.status === "FRAUD"; }).length;
+    const suspCount  = transactions.filter(function (t) { return t.status === "SUSPICIOUS"; }).length;
+    const safeCount  = transactions.filter(function (t) { return t.status === "SAFE"; }).length;
+
+    const el = function (id) { return document.getElementById(id); };
+    if (el("statTotal"))      el("statTotal").textContent      = total      || "—";
+    if (el("statFraud"))      el("statFraud").textContent      = fraudCount || "—";
+    if (el("statSuspicious")) el("statSuspicious").textContent = suspCount  || "—";
+    if (el("statSafe"))       el("statSafe").textContent       = safeCount  || "—";
+
     transactionsTableBody.innerHTML = "";
 
     if (transactions.length === 0) {
-      transactionsTableBody.innerHTML = `
-        <tr>
-          <td colspan="6" class="empty-row">Henüz işlem yok.</td>
-        </tr>
-      `;
+      transactionsTableBody.innerHTML = `<tr><td colspan="7" class="empty-row">No transactions yet.</td></tr>`;
       return;
     }
 
     transactions.forEach(function (transaction) {
       const row = document.createElement("tr");
-
       const statusClass = transaction.status.toLowerCase();
-
       row.innerHTML = `
+        <td>${transaction.id}</td>
         <td>${transaction.amount}</td>
         <td>${transaction.country}</td>
         <td>${transaction.user_country}</td>
         <td>${transaction.hour}</td>
         <td>${transaction.risk_score}</td>
-        <td>
-          <span class="status-pill ${statusClass}">
-            ${transaction.status}
-          </span>
-        </td>
+        <td><span class="status-pill ${statusClass}">${transaction.status}</span></td>
       `;
-
       transactionsTableBody.appendChild(row);
     });
 
@@ -222,5 +171,24 @@ form.addEventListener("submit", async function (event) {
 
 refreshHistoryBtn.addEventListener("click", loadTransactionHistory);
 
-loadTransactionHistory();
+deleteDatabaseBtn.addEventListener("click", async function () {
+  const confirmed = confirm("Are you sure you want to delete all transaction history?");
+  if (!confirmed) return;
+
+  try {
+    const response = await fetch(`${apiBaseUrl}/transactions`, { method: "DELETE" });
+    const data = await response.json();
+    if (!response.ok) throw new Error("Database silinemedi");
+
+    clearResultResetTimer();
+    resetResultCard();
+    loadTransactionHistory();
+    alert("Transaction history deleted successfully.");
+
+  } catch (error) {
+    alert("Database silinirken hata oluştu.");
+    console.error("DELETE error:", error);
+  }
 });
+
+loadTransactionHistory();

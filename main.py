@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
+import sqlite3
 
 app = FastAPI(title="FraudGuard API")
 
@@ -12,7 +13,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-transactions = []
+DATABASE_NAME = "fraudguard.db"
 
 
 class Transaction(BaseModel):
@@ -22,6 +23,46 @@ class Transaction(BaseModel):
     hour: int
     transactions_last_minute: int
 
+
+def get_db_connection():
+    connection = sqlite3.connect(DATABASE_NAME)
+    connection.row_factory = sqlite3.Row
+    return connection
+
+
+def create_transactions_table():
+    connection = get_db_connection()
+    cursor = connection.cursor()
+
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS transactions (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            amount REAL NOT NULL,
+            country TEXT NOT NULL,
+            user_country TEXT NOT NULL,
+            hour INTEGER NOT NULL,
+            transactions_last_minute INTEGER NOT NULL,
+            risk_score INTEGER NOT NULL,
+            status TEXT NOT NULL,
+            reasons TEXT NOT NULL
+        )
+    """)
+
+    connection.commit()
+    connection.close()
+
+
+create_transactions_table()
+@app.delete("/transactions")
+def delete_all_transactions():
+    connection = get_db_connection()
+    cursor = connection.cursor()
+
+    cursor.execute("DELETE FROM transactions")
+    connection.commit()
+    connection.close()
+
+    return {"message": "All transactions deleted successfully"}
 
 @app.get("/")
 def home():
@@ -58,18 +99,36 @@ def analyze_transaction(transaction: Transaction):
     else:
         status = "SAFE"
 
-    transaction_record = {
-        "amount": transaction.amount,
-        "country": transaction.country,
-        "user_country": transaction.user_country,
-        "hour": transaction.hour,
-        "transactions_last_minute": transaction.transactions_last_minute,
-        "risk_score": risk_score,
-        "status": status,
-        "reasons": reasons
-    }
+    reasons_text = ", ".join(reasons)
 
-    transactions.append(transaction_record)
+    connection = get_db_connection()
+    cursor = connection.cursor()
+
+    cursor.execute("""
+        INSERT INTO transactions (
+            amount,
+            country,
+            user_country,
+            hour,
+            transactions_last_minute,
+            risk_score,
+            status,
+            reasons
+        )
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    """, (
+        transaction.amount,
+        transaction.country,
+        transaction.user_country,
+        transaction.hour,
+        transaction.transactions_last_minute,
+        risk_score,
+        status,
+        reasons_text
+    ))
+
+    connection.commit()
+    connection.close()
 
     return {
         "risk_score": risk_score,
@@ -80,6 +139,29 @@ def analyze_transaction(transaction: Transaction):
 
 @app.get("/transactions")
 def get_transactions():
+    connection = get_db_connection()
+    cursor = connection.cursor()
+
+    cursor.execute("SELECT * FROM transactions ORDER BY id DESC")
+    rows = cursor.fetchall()
+
+    connection.close()
+
+    transactions = []
+
+    for row in rows:
+        transactions.append({
+            "id": row["id"],
+            "amount": row["amount"],
+            "country": row["country"],
+            "user_country": row["user_country"],
+            "hour": row["hour"],
+            "transactions_last_minute": row["transactions_last_minute"],
+            "risk_score": row["risk_score"],
+            "status": row["status"],
+            "reasons": row["reasons"].split(", ") if row["reasons"] else []
+        })
+
     return {
         "transactions": transactions,
         "total": len(transactions)

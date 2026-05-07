@@ -1,100 +1,191 @@
 <!DOCTYPE html>
-<html lang="tr">
+<html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>FraudGuard | Fraud Detection</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
 
+  <nav class="navbar">
+    <div class="nav-brand">
+      <div class="nav-logo-icon">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+        </svg>
+      </div>
+      <span class="nav-title">FraudGuard</span>
+    </div>
+    <span class="nav-tag">Rule-Based AI Engine</span>
+  </nav>
+
   <main class="container">
+
     <section class="hero">
-      <p class="badge">Fintech Fraud Detection System</p>
-      <h1>FraudGuard</h1>
-      <p class="subtitle">
-        Transaction verilerini analiz eder, risk skorunu hesaplar ve işlemi
-        SAFE, SUSPICIOUS veya FRAUD olarak sınıflandırır.
-      </p>
-    </section>
-
-    <section class="panel">
-      <form id="transactionForm" class="form">
-        <div class="form-group">
-          <label for="amount">Transaction Amount</label>
-          <input type="number" id="amount" placeholder="Örn: 120000" required />
+      <p class="hero-eyebrow">Fintech Fraud Detection System</p>
+      <h1 class="hero-title">Detect <span class="gradient-text">Financial Fraud</span> Instantly</h1>
+      <p class="hero-sub">Enter transaction details for instant risk scoring and fraud classification.</p>
+      <div class="stats-bar">
+        <div class="stat-item">
+          <span class="stat-num" id="statTotal">—</span>
+          <span class="stat-lbl">Analyzed</span>
         </div>
-
-        <div class="form-group">
-          <label for="country">Transaction Country</label>
-          <input type="text" id="country" placeholder="Örn: RU" required />
+        <div class="stat-sep"></div>
+        <div class="stat-item">
+          <span class="stat-num fraud-text" id="statFraud">—</span>
+          <span class="stat-lbl">Fraud</span>
         </div>
-
-        <div class="form-group">
-          <label for="userCountry">User Country</label>
-          <input type="text" id="userCountry" placeholder="Örn: TR" required />
+        <div class="stat-sep"></div>
+        <div class="stat-item">
+          <span class="stat-num warn-text" id="statSuspicious">—</span>
+          <span class="stat-lbl">Suspicious</span>
         </div>
-
-        <div class="form-group">
-          <label for="hour">Transaction Hour</label>
-          <input type="number" id="hour" min="0" max="23" placeholder="Örn: 3" required />
-        </div>
-
-        <div class="form-group">
-          <label for="transactionsLastMinute">Transactions Last Minute</label>
-          <input type="number" id="transactionsLastMinute" placeholder="Örn: 8" required />
-        </div>
-
-        <button type="submit">Analyze Transaction</button>
-      </form>
-
-      <div class="result-card hidden" id="resultCard">
-        <p class="result-label">Analysis Result</p>
-
-        <div class="score-row">
-          <span>Risk Score</span>
-          <strong id="riskScore">0</strong>
-        </div>
-
-        <div class="status" id="statusText">SAFE</div>
-
-        <div class="reasons">
-          <h3>Reasons</h3>
-          <ul id="reasonsList"></ul>
+        <div class="stat-sep"></div>
+        <div class="stat-item">
+          <span class="stat-num safe-text" id="statSafe">—</span>
+          <span class="stat-lbl">Safe</span>
         </div>
       </div>
     </section>
-    <section class="history-section">
-  <div class="history-header">
-    <div>
-      <p class="result-label">Transaction History</p>
-      <h2>Geçmiş İşlemler</h2>
-    </div>
-    <button type="button" id="refreshHistoryBtn" class="secondary-btn">
-      Refresh
-    </button>
-  </div>
 
-  <div class="table-wrapper">
-    <table>
-      <thead>
-        <tr>
-          <th>Amount</th>
-          <th>Country</th>
-          <th>User Country</th>
-          <th>Hour</th>
-          <th>Risk Score</th>
-          <th>Status</th>
-        </tr>
-      </thead>
-      <tbody id="transactionsTableBody">
-        <tr>
-          <td colspan="6" class="empty-row">Henüz işlem yok.</td>
-        </tr>
-      </tbody>
-    </table>
-  </div>
-</section>
+    <section class="panel">
+
+      <div class="card">
+        <div class="card-header">
+          <div class="card-icon-wrap">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/>
+            </svg>
+          </div>
+          <div>
+            <h2 class="card-title">New Transaction</h2>
+            <p class="card-sub">Fill in the transaction details below</p>
+          </div>
+        </div>
+
+        <form id="transactionForm" class="form">
+
+          <div class="field">
+            <label for="amount">Transaction Amount</label>
+            <div class="input-wrap">
+              <span class="input-prefix">$</span>
+              <input type="number" id="amount" placeholder="e.g. 120000" required />
+            </div>
+          </div>
+
+          <div class="field-row">
+            <div class="field">
+              <label for="country">Transaction Country</label>
+              <input type="text" id="country" placeholder="e.g. RU" required />
+            </div>
+            <div class="field">
+              <label for="userCountry">User Country</label>
+              <input type="text" id="userCountry" placeholder="e.g. TR" required />
+            </div>
+          </div>
+
+          <div class="field-row">
+            <div class="field">
+              <label for="hour">Transaction Hour <span class="label-hint">(0–23)</span></label>
+              <input type="number" id="hour" min="0" max="23" placeholder="e.g. 3" required />
+            </div>
+            <div class="field">
+              <label for="transactionsLastMinute">Tx / Last Minute</label>
+              <input type="number" id="transactionsLastMinute" placeholder="e.g. 8" required />
+            </div>
+          </div>
+
+          <button type="submit" id="analyzeBtn">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+              <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+            </svg>
+            <span id="btnText">Analyze Transaction</span>
+          </button>
+
+        </form>
+      </div>
+
+      <div class="card result-card" id="resultCard">
+        <div class="card-header result-card-header">
+          <div>
+            <h2 class="card-title">Analysis Result</h2>
+            <p class="card-sub" id="resultTimestamp">Waiting for input...</p>
+          </div>
+        </div>
+
+        <div class="gauge-wrap">
+          <svg class="gauge-svg" viewBox="0 0 200 200">
+            <circle class="gauge-track" cx="100" cy="100" r="80"/>
+            <circle class="gauge-fill" id="gaugeFill" cx="100" cy="100" r="80"/>
+          </svg>
+          <div class="gauge-inner">
+            <strong id="riskScore">—</strong>
+            <span class="gauge-lbl">/ 100</span>
+          </div>
+        </div>
+
+        <div class="status waiting" id="statusText">WAITING</div>
+
+        <div class="reasons-box">
+          <p class="reasons-title">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+            </svg>
+            Risk Factors
+          </p>
+          <ul id="reasonsList" class="reasons-list"></ul>
+        </div>
+      </div>
+
+    </section>
+
+    <section class="card history-card">
+      <div class="history-top">
+        <div>
+          <h2 class="card-title">Transaction History</h2>
+          <p class="card-sub">Most recent transactions first</p>
+        </div>
+        <div class="history-actions">
+          <button type="button" id="refreshHistoryBtn" class="btn-secondary">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+              <polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/>
+              <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+            </svg>
+            Refresh
+          </button>
+          <button type="button" id="deleteDatabaseBtn" class="btn-danger">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+              <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
+              <path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
+            </svg>
+            Delete Database
+          </button>
+        </div>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Amount</th>
+              <th>Country</th>
+              <th>User Country</th>
+              <th>Hour</th>
+              <th>Risk Score</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody id="transactionsTableBody">
+            <tr><td colspan="7" class="empty-row">No transactions yet.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
   </main>
 
   <script src="app.js"></script>
